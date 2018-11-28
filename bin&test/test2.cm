@@ -1,0 +1,16 @@
+int main(void)
+{
+  int a;
+  int fu[50];
+  int f;
+  a=6;
+  f=1;
+  while( a != 0 )
+  {
+        int a;
+	int b;
+	f = f * a;	// Warn and cast
+	a = a -1;
+	b= b  +1;
+  }
+}
