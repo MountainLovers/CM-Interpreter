@@ -1,0 +1,8 @@
+/* 最简单的测试，查错用 */
+
+int a;
+int main(void)
+{
+  int b;
+  b=1;
+}

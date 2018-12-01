@@ -1,3 +1,5 @@
+/* 两个函数定义; 包括函数调用; 两个if语句包含局部变量测试. */
+
 int gcd(int u, int v)
 {
 	if (v == 0) return u;
@@ -9,5 +11,6 @@ int main(void)
   int x; int y;
   x = input(); y = input();
   output(gcd( x, y ));
+  if (v == 0) return;
   return 0;
 }

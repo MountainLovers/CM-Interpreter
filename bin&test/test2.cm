@@ -1,16 +1,27 @@
+/* 重复定义及局部变量与其他变量重名测试 */
 int main(void)
 {
   int a;
+  int c;
   int fu[50];
+  int f;
   int f;
   a=6;
   f=1;
   while( a != 0 )
   {
-        int a;
+        int c;
 	int b;
 	f = f * a;	// Warn and cast
 	a = a -1;
 	b= b  +1;
+	while (a == 0)
+	{
+		int ffff;
+		if (a*c == b){
+			int ffff;
+			ffff =1;
+		}
+	}
   }
 }
