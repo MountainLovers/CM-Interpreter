@@ -16,6 +16,12 @@
 
 static TreeNode * savedTree; /* stores syntax tree for later return */
 
+//最大递归深度10，也就是最大嵌套深度
+#define MAXDEPTH 10
+
+int Depth;
+int DepthNum[MAXDEPTH];
+
 %}
 
 %union{
@@ -43,8 +49,8 @@ static TreeNode * savedTree; /* stores syntax tree for later return */
 %token ASSIGN
 %token NEWLINE ERROR
 
-%type <node> decl_list stat params params_list local_decl stat_list fun_decl arg_list
-%type <node> sele_stmt decl compound_stmt iter_stmt var_decl exp_stmt return_stmt call
+%type <node> decl_list stat params params_list local_decl stat_list fun_decl arg_list 
+%type <node> sele_stmt decl compound_stmt iter_stmt var_decl exp_stmt return_stmt call if_last_stmt
 %type <node> exp factor param var simp_exp add_exp term args
 %type <node> addop mulop relop
 %type <dataType> type-specifier
@@ -75,14 +81,21 @@ var_decl	: type-specifier ID SEMI
 				{	
 					$$ = newStmtNode(DeclK);
 					$$->attr.name = $2;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "decl:%s:%d/%d\n", $$->attr.name, $$->depth, $$->depthnum);
 					/* 数组长度为0代表非数组 */
 					$$->arrayLength = 0;
 					$$->type = $1;
 					$$->lineno = lineno;
+					// debug fprintf(listing, "decltree:%s:%d\n", $$->attr.name, $$);
 				}
 			| type-specifier ID LBRACKET NUM RBRACKET SEMI
 				{	$$ = newStmtNode(DeclK);
 					$$->attr.name = $2;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "decl:%s:%d/%d\n", $$->attr.name, $$->depth, $$->depthnum);
 					$$->arrayLength = $4;
 					$$->type = $1;
 					if($$->type == Int) {
@@ -96,15 +109,28 @@ type-specifier
 			: INT 	{ $$ = $1; }
 			| VOID  { $$ = $1; }
 			;
-fun_decl	: type-specifier ID LPAREN params RPAREN
+fun_decl	: type-specifier ID 
+				{
+					Depth = Depth+1; 
+					DepthNum[Depth] = DepthNum[Depth]+1;
+				}
+			  LPAREN params RPAREN
 				{
 					$$ = newStmtNode(FuncK);
 					$$->type = $1;
 					$$->attr.name = $2;
-					$$->child[0] = $4;
+					$$->child[0] = $5;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "funtree:%s:%d\n", $$->attr.name, $$);
 				}
-			| compound_stmt { $$ = $1; }
+			| compound_stmt 
+				{ 
+					$$ = $1; 
+					Depth = Depth-1;
+					// debug fprintf(listing, "comptree:%d\n", $$);
+				}
 			; 
 params		: VOID { $$ = NULL; }
 			| params_list { $$ = $1; }
@@ -125,6 +151,9 @@ param 		: type-specifier ID
 				{
 					$$ = newStmtNode(ParmK);
 					$$->attr.name = $2;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "decl:%s:%d/%d\n", $$->attr.name, $$->depth, $$->depthnum);
 					$$->arrayLength = 0;
 					$$->type = $1;
 					$$->lineno = lineno;
@@ -133,6 +162,9 @@ param 		: type-specifier ID
 				{
 					$$ = newStmtNode(ParmK);
 					$$->attr.name = $2;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "decl:%s:%d/%d\n", $$->attr.name, $$->depth, $$->depthnum);
 					$$->arrayLength = -1;
 					$$->type = $1;
 					$$->lineno = lineno;
@@ -144,6 +176,8 @@ compound_stmt
 					$$ = newStmtNode(CompoundK);
 					$$->child[0] = $2;
 					$$->child[1] = $3;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
 					$$->lineno = lineno;
 				}
 			;
@@ -183,41 +217,78 @@ stat 		: exp_stmt {$$ = $1;}
 exp_stmt	: exp SEMI {$$ = $1;}
 			| SEMI {$$ = NULL;}
 			;
-sele_stmt   : IF LPAREN exp RPAREN stat
+sele_stmt   : IF
+				{
+					Depth++;
+					DepthNum[Depth]++;
+				} 
+			  if_last_stmt
+			  	{
+			  		$$ = $3;
+			  	}
+			;
+if_last_stmt: LPAREN exp RPAREN stat
 				{	
 					$$ = newStmtNode(IfK);
-					$$->child[0] = $3;
-					$$->child[1] = $5;
+					$$->child[0] = $2;
+					$$->child[1] = $4;
 					$$->child[2] = NULL;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
 					$$->lineno = lineno;
+					// debug fprintf(listing, "iftree:%d at %d\n", $$, $$->lineno);
+					// debug fprintf(listing, "if:%d/%d at %d\n", $$->depth, $$->depthnum, $$->lineno);
+					Depth--;
 				}
-			| IF LPAREN exp RPAREN stat ELSE stat
+			| LPAREN exp RPAREN stat ELSE stat
 				{	
 					$$ = newStmtNode(IfK);
-					$$->child[0] = $3;
-					$$->child[1] = $5;
-					$$->child[2] = $7;
+					$$->child[0] = $2;
+					$$->child[1] = $4;
+					$$->child[2] = $6;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
 					$$->lineno = lineno;
+					// debug fprintf(listing, "iftree:%d at %d\n", $$, $$->lineno);
+					// debug fprintf(listing, "if:%d/%d at %d\n", $$->depth, $$->depthnum, $$->lineno);
+					Depth--;
 				}
 			;
-iter_stmt	: WHILE LPAREN exp RPAREN stat
+iter_stmt	: WHILE
+				{
+					Depth++;
+					DepthNum[Depth]++;
+				} 
+			  LPAREN exp RPAREN stat
 				{	$$ = newStmtNode(WhileK);
-					$$->child[0] = $3;
-					$$->child[1] = $5;
+					$$->child[0] = $4;
+					$$->child[1] = $6;
 					$$->lineno = lineno;
+					Depth--;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth]-1;
+					// debug fprintf(listing, "whiletree:%d\n", $$);
 				}
 			;
 return_stmt	: RETURN SEMI 
 				{
 					$$ = newStmtNode(ReturnK);
+					// debug fprintf(listing, "returntree:%d at %d\n", $$, $$->lineno);
 					$$->child[0] = NULL;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
 					$$->lineno = lineno;
+					// debug fprintf(listing, "return:%d/%d at %d\n", $$->depth, $$->depthnum, $$->lineno);
 				}
 			| RETURN exp SEMI
 				{
 					$$ = newStmtNode(ReturnK);
+					// debug fprintf(listing, "returntree:%d at %d\n", $$, $$->lineno);
 					$$->child[0] = $2;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
 					$$->lineno = lineno;
+					// debug fprintf(listing, "return:%d/%d at %d\n", $$->depth, $$->depthnum, $$->lineno);
 				}
 			;
 exp 		: var ASSIGN exp
@@ -226,6 +297,10 @@ exp 		: var ASSIGN exp
 					$$->child[0] = $1;
 					$$->child[1] = $3;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "Exp:%d/%d  %d\n", $$->depth, $$->depthnum, $$->lineno);
+					// debug fprintf(listing, "Assign:%d\n", $$);
 				}
 			| simp_exp {$$ = $1;}
 			;
@@ -236,6 +311,10 @@ var 		: ID
 					//	child[0] is NULL means this is not array;
 					$$->child[0] = NULL;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "decl:%s:%d/%d\n", $$->attr.name, $$->depth, $$->depthnum);
+					// debug fprintf(listing, "varuse:%s:%d\n", $$->attr.name, $$);
 				}
 			| ID LBRACKET exp RBRACKET
 				{
@@ -244,6 +323,9 @@ var 		: ID
 					//	child[0] not NULL means x in array[x]
 					$$->child[0] = $3;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "decl:%s:%d/%d\n", $$->attr.name, $$->depth, $$->depthnum);
 				}
 			;
 simp_exp 	: add_exp relop add_exp
@@ -253,6 +335,9 @@ simp_exp 	: add_exp relop add_exp
 					$$->child[1] = $3;
 					$$->attr.op = $2;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "simp_exp:%d/%d  %d\n", $$->depth, $$->depthnum, $$->lineno);
 				}
 			| add_exp { $$ = $1; }
 			;
@@ -270,6 +355,9 @@ add_exp 	: add_exp addop term
 					$$->child[1] = $3;
 					$$->attr.op = $2;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "add_exp:%d/%d  %d\n", $$->depth, $$->depthnum, $$->lineno);
 				}
 			| term {$$ = $1;}
 			;
@@ -283,6 +371,9 @@ term		: term mulop factor
 					$$->child[1] = $3;
 					$$->attr.op = $2;
 					$$->lineno = lineno;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "term:%d/%d  %d\n", $$->depth, $$->depthnum, $$->lineno);
 				}
 			| factor {$$ = $1;}
 			;
@@ -297,14 +388,20 @@ factor 		: LPAREN exp RPAREN {$$ = $2;}
 					$$ = newExpNode(IntValueK);
 					$$->value.int_val = $1;
 					$$->type = Int;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
 					$$->lineno = lineno;
 				}
 			;
 call 		: ID LPAREN args RPAREN
 				{
 					$$ = newExpNode(CallK);
+					// debug fprintf(listing, "calltree:%s:%d\n", $$->attr.name, $$);
 					$$->attr.name = $1;
 					$$->child[0] = $3;
+					$$->depth = Depth;
+					$$->depthnum = DepthNum[Depth];
+					// debug fprintf(listing, "call:%s:%d/%d at %d\n",$$->attr.name, $$->depth, $$->depthnum, $$->lineno);
 				}
 			;
 args 		: {$$ = NULL;}
@@ -326,8 +423,8 @@ arg_list 	: arg_list COMMA exp
 %%
 
 int yyerror(char * message)
-{	fprintf(listing,"Syntax error at line %d: %s\n",lineno,message);
-	fprintf(listing,"Current token: %s",tokenString);
+{	// debug fprintf(listing,"Syntax error at line %d: %s\n",lineno,message);
+	// debug fprintf(listing,"Current token: %s",tokenString);
 	printToken(yychar);
 	Error = TRUE;
 	return 0;

@@ -79,6 +79,8 @@ TreeNode * newStmtNode(StmtKind kind)
 		t->kind.stmt = kind;
 		t->lineno = lineno;
 		t->type = Int;
+		t->depth = -1;
+		t->depthnum = -1;
 	}
 	return t;
 }
@@ -97,6 +99,8 @@ TreeNode * newExpNode(ExpKind kind)
 		t->kind.exp = kind;
 		t->lineno = lineno;
 		t->type = Int;
+		t->depth = -1;
+		t->depthnum = -1;
 	}
 	return t;
 }

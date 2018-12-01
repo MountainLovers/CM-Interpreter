@@ -1,3 +1,6 @@
+struct domainNode;
+typedef struct domainNode DomainNode;
+
 /*	searchSymTab()用于查找和插入符号表，并协助类型检查。
 	参数说明：
 	name是当前的变量名，
@@ -7,17 +10,17 @@
 	返回值：
 	正确返回时为arrayLength，遇错为－1；
 	*/
-int insertSymTab( char * name, int varLineno, int type, int arrayLength );
+int insertSymTab( char * name, int dep, int depnum, int varLineno, int type, int arrayLength );
 
 /*	查找符号表，若找不到则返回－1，否则返回变量的arrayLength，
 	arrayLength为0表示非数组，arrayLength非0表示下标的值。
 	*/
-int lookupSymTab ( char * name, int int_val, double real_val, int varLineno );
+int lookupSymTab ( char * name, DomainNode * domain, int int_val, double real_val, int varLineno );
 
 /*	参数type为0时，直接返回变量在符号表中的类型；
 	type不为0时，检查变量名的类型与传入的type是否一致，一致返回0，不一致返回1。
 	*/
-int checkType(char * name, int type, int varLineno);
+int checkType(char * name, DomainNode * domain, int type, int varLineno);
 
 /*	printSymTab()打印符号表，验证符号表是否正确构造。
 	*/

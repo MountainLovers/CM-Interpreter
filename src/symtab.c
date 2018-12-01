@@ -3,7 +3,7 @@
 #include <string.h>
 #include "symtab.h"
 #include "globals.h"
-
+#include "domain.h"
 /* SIZE 为符号表大小，是一个比较合适的素数 */
 #define SIZE 211
 
@@ -41,8 +41,18 @@ typedef struct SymbolRec
 /* the hash table */
 static Symbol hashTable[SIZE];
 
-int insertSymTab( char * name, int varLineno, int type, int arrayLength )
-{	int h = hash(name);
+int insertSymTab( char * name, int dep, int depnum, int varLineno, int type, int arrayLength )
+{	
+	char *fenge = "-";
+	char depthstr[10], depthnumstr[10];
+	sprintf(depthstr, "%d", dep);
+	sprintf(depthnumstr, "%d", depnum);
+	char namet[100];
+	strcpy(namet, name);
+	strcat(namet, depthstr);
+	strcat(namet, fenge);
+	strcat(namet, depthnumstr);
+	int h = hash(namet);
 	Symbol s =  hashTable[h];
 	/* 遍历符号表，查找是否有同名项 */
 	while ((NULL != s)&&(0 != strcmp(name,s->name)))
@@ -52,6 +62,7 @@ int insertSymTab( char * name, int varLineno, int type, int arrayLength )
 		s->name = name;
 		s->varLineno = varLineno;
 		s->type = type;
+		// debug fprintf(listing, "insertSymtab:%s\n", namet);
 		if (0 > arrayLength)
 		{	fprintf(listing,
 				"Error:line %d:The length of array should be more than zero.\n", varLineno);
@@ -68,58 +79,107 @@ int insertSymTab( char * name, int varLineno, int type, int arrayLength )
 	{	fprintf(listing,
 			"Error:line %d:Variable %s with the same name has been declared at line %d.\n",
 				varLineno, name, s->varLineno);
+		// debug fprintf(listing, "%d-%d  %s\n", dep, depnum, namet);
 		Error = TRUE;
 	}
 	return -1;	//返回值为－1表示插入过程中出错。
 }
 
-int lookupSymTab( char * name, int int_val, double real_val, int varLineno)
-{	int h = hash(name);
-	Symbol s =  hashTable[h];
-	while ((s != NULL)&&(0 != strcmp(name,s->name)))
-		s = s->next;
-	if(NULL == s)	/* 该符号不在符号表中，报错 */
-	{	fprintf(listing,
-			"Error:line %d:Variable %s has not been declared.\n",varLineno, name);
-		Error = TRUE;
-		return -1;
-	}
-	else
-	{	if ((int_val != -1) || (real_val != -1))
-		{	if (real_val != -1)
-				s->value.real_val = real_val;
-			else
-				s->value.int_val = int_val;
+int lookupSymTab( char * name, DomainNode * domain, int int_val, double real_val, int varLineno)
+{	
+	int flag = 0;
+	char *fenge = "-";
+	char depthstr[10], depthnumstr[10];
+	char namet[100];
+	while (domain)
+	{
+		if (domain->depth == -1 && domain->depthnum == -1) 
+		{
+			domain = domain->pre; 
+			continue;
 		}
-		return s->arrayLength;
+		// debug fprintf(listing, "find:%s:%d-%d\n", name, domain->depth, domain->depthnum);
+		sprintf(depthstr, "%d", domain->depth);
+		sprintf(depthnumstr, "%d", domain->depthnum);
+		strcpy(namet, name);
+		strcat(namet, depthstr);
+		strcat(namet, fenge);
+		strcat(namet, depthnumstr);
+		int h = hash(namet);
+		Symbol s =  hashTable[h];
+		while ((s != NULL)&&(0 != strcmp(name,s->name)))
+			s = s->next;
+		if (s != NULL)
+		{
+			if ((int_val != -1) || (real_val != -1))
+			{	
+				if (real_val != -1)
+					s->value.real_val = real_val;
+				else
+					s->value.int_val = int_val;
+			}
+			return s->arrayLength;
+		}
+		domain = domain->pre;
 	}
+	fprintf(listing,
+		"Error:line %d:Variable %s has not been declared.\n",varLineno, name);
+
+	Error = TRUE;
+	return -1;
+	
 }
 
-int checkType(char * name, int type, int varLineno)
-{	int h = hash(name);
-	Symbol s =  hashTable[h];
-	while ((NULL != s)&&(0 != strcmp(name,s->name)))
-		s = s->next;
-	if(NULL != s)
-	{	if (type != 0)
-		{	if (type != s->type)
-			{	fprintf(listing,
-					"Error:line %d:Type of variable %s is not correct.",s->varLineno, name);
-				Error = TRUE;
-				return 1;
+int checkType(char * name, DomainNode * domain, int type, int varLineno)
+{	
+	int flag = 0;
+	char *fenge = "-";
+	char depthstr[10], depthnumstr[10];
+	char namet[100];
+	while (domain)
+	{
+		if (domain->depth == -1 && domain->depthnum == -1) 
+		{
+			domain = domain->pre; 
+			continue;
+		}
+		// debug fprintf(listing, "find:%s:%d-%d\n", name, domain->depth, domain->depthnum);s
+		sprintf(depthstr, "%d", domain->depth);
+		sprintf(depthnumstr, "%d", domain->depthnum);
+		strcpy(namet, name);
+		strcat(namet, depthstr);
+		strcat(namet, fenge);
+		strcat(namet, depthnumstr);
+		int h = hash(namet);
+		Symbol s =  hashTable[h];
+		while ((NULL != s)&&(0 != strcmp(name,s->name)))
+			s = s->next;
+		if(NULL != s)
+		{	
+			if (type != 0)
+			{	if (type != s->type)
+				{	fprintf(listing,
+						"Error:line %d:Type of variable %s is not correct.",s->varLineno, name);
+					Error = TRUE;
+					return 1;
+				}
+				else
+					return 0;
 			}
 			else
-				return 0;
+				return s->type;
+			flag = 1;
+			break;
 		}
-		else
-			return s->type;
+		domain = domain->pre;
 	}
-	else
-	{	fprintf(listing,
-			"Error:line %d:Variable %s has not been declared.\n",varLineno, name);
-		Error = TRUE;
-		return -1;
-	}
+	if (flag == 0)
+		{
+			fprintf(listing,
+				"Error:line %d:Variable %s has not been declared.\n",varLineno, name);
+			Error = TRUE;
+			return -1;
+		}
 }
 
 double getValue(char * name)

@@ -40,6 +40,9 @@ extern FILE* listing; /* 输出文件 */
 
 extern int lineno; /* source line number for listing */
 
+struct domainNode;
+typedef struct domainNode DomainNode;
+
 typedef enum {StmtK, ExpK} NodeKind;
 typedef enum {IfK, WhileK, DeclK, CompoundK, FuncK, ParmK, ReturnK, AssignK} StmtKind;
 typedef enum {OpK, IntValueK, IdK, CallK} ExpKind;
@@ -67,7 +70,11 @@ typedef struct treeNode
 				double * realArray; } array;
 		int arrayLength;
 		ExpType type;
+		int depth;
+		int depthnum;
+		DomainNode *domain;
 	} TreeNode;
+
 
 /* EchoSource为TRUE时，
 	解释器会在语法分析过程中，

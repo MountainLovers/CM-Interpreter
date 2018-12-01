@@ -3,6 +3,7 @@
 #include "scan.h"
 #include "parse.h"
 #include "analyze.h"
+#include "domain.h"
 
 /* 行号、源文件、输出文件 */
 int lineno = 0;
@@ -16,8 +17,8 @@ int Execute = FALSE;
 int printSyntaxTree = TRUE;
 
 int Error = FALSE;
-int
-main( int argc, char * argv[] )
+
+int main( int argc, char * argv[] )
 {
 	TreeNode * syntaxTree;
 	char pgm[120]; /* 源文件名 */
@@ -46,14 +47,16 @@ main( int argc, char * argv[] )
 	fprintf(listing,"\nCM Interpretation: %s\n",pgm);
 
 	if (Parse)
-	{	syntaxTree = parse();
+	{	
+		syntaxTree = parse();
 		if (printSyntaxTree)
 		{	fprintf(listing,"Syntax tree:\n");
 			printTree(syntaxTree);
 			fprintf(listing, "Print SyntaxTree Succeeded!\n");
 		}
 		if (! Error)
-		{	if (Analyze)
+		{	
+			if (Analyze)
 			{
 				buildSymTab(syntaxTree);
 				if(! Error)
