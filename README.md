@@ -6,9 +6,9 @@
 
 ## Grammar
 
-![1](..\img\1.png)
+![image](https://raw.githubusercontent.com/MountainLovers/Fundamentals_of_Compiling/master/img/1.png)
 
-![2](..\img\2.png)
+![image](https://raw.githubusercontent.com/MountainLovers/Fundamentals_of_Compiling/master/img/2.png)
 
 ## What's new?
 
