@@ -6,9 +6,9 @@
 
 ## Grammar
 
-![1](C:\Users\24202\Desktop\1.png)
+![1](..\img\1.png)
 
-![2](C:\Users\24202\Desktop\2.png)
+![2](..\img\2.png)
 
 ## What's new?
 
